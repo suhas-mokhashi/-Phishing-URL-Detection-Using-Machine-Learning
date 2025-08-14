@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Safety Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        async function analyzeURL() {
+            let urlInput = document.getElementById('urlInput').value;
+            const resultDiv = document.getElementById('result');
+
+            if (!urlInput.match(/^https?:\/\//)) {
+                urlInput = 'https://' + urlInput;
+            }
+
+            if (!isValidURL(urlInput)) {
+                resultDiv.innerHTML = '<p class="text-red-500">Please enter a valid URL.</p>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<p class="text-gray-500">Analyzing...</p>';
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: urlInput })
+                });
+
+                if (!response.ok) throw new Error('Error analyzing URL');
+
+                const result = await response.json();
+                const prediction = result.prediction;
+
+                let message = '';
+                switch (prediction) {
+                    case 'SAFE':
+                        message = `<span class='text-green-500'>Safe: This URL is deemed safe.</span>`;
+                        break;
+                    case 'PHISHING':
+                        message = `<span class='text-red-500'>Danger: This URL appears to be phishing.</span>`;
+                        break;
+                    default:
+                        message = `<span class='text-gray-500'>Unable to analyze URL. Try again later.</span>`;
+                }
+
+                resultDiv.innerHTML = `<div class='p-4 bg-gray-100 border rounded-md'>${message}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = '<p class="text-red-500">Error analyzing the URL. Please try again later.</p>';
+            }
+        }
+
+        function isValidURL(url) {
+            const pattern = /^(https?:\/\/)?([\w-]+(\.[\w-]+)+)(\/[\w-]*)*$/i;
+            return pattern.test(url);
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <header class="flex justify-between items-center p-4 bg-white shadow-sm">
+        <div class="flex items-center">
+            <div class="text-blue-500 font-bold text-lg">Phishing Websites Detector</div>
+        </div>
+    </header>
+
+    <main class="flex flex-col items-center justify-center text-center py-16 px-4">
+        <h1 class="text-3xl font-bold mb-4">Is this link safe?</h1>
+        <p class="text-gray-600 mb-8">Scan a URL to detect malware, fake websites, and phishing attacks.</p>
+        <div class="w-full max-w-md flex">
+            <input id="urlInput" type="text" placeholder="Enter your URL here"
+                class="w-full border border-gray-300 rounded-l-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button onclick="analyzeURL()" class="bg-blue-500 text-white px-6 py-2 rounded-r-md hover:bg-blue-600">Analyze</button>
+        </div>
+        <div id="result" class="mt-6"></div>
+    </main>
+</body>
+</html>
